@@ -47,7 +47,6 @@ build-*/
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
-Makefile
 install_manifest.txt
 compile_commands.json
 
@@ -66,3 +65,8 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# Needle 3 engine + weights (downloaded via `make needle`)
+needle3/needle.h
+needle3/libneedle.a
+needle3/needle3.cact
