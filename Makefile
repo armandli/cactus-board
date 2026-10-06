@@ -5,7 +5,13 @@ BUILD_TYPE ?= Debug
 JOBS       ?= $(shell sysctl -n hw.ncpu 2>/dev/null || nproc)
 
 NEEDLE_DIR      := needle3
-NEEDLE_PLATFORM := macos-arm64
+_OS   := $(shell uname -s)
+_ARCH := $(shell uname -m)
+ifeq ($(_OS),Darwin)
+  NEEDLE_PLATFORM := macos-$(_ARCH)
+else
+  NEEDLE_PLATFORM := linux-$(_ARCH)
+endif
 NEEDLE_URL      := https://huggingface.co/Cactus-Compute/needle3/resolve/main
 NEEDLE_FILES    := $(NEEDLE_DIR)/needle.h $(NEEDLE_DIR)/libneedle.a $(NEEDLE_DIR)/needle3.cact
 

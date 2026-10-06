@@ -15,3 +15,10 @@ set_target_properties(needle::needle PROPERTIES
   IMPORTED_LOCATION "${NEEDLE_DIR}/libneedle.a"
   INTERFACE_INCLUDE_DIRECTORIES "${NEEDLE_DIR}"
 )
+
+# libneedle.a is built with libc++ (Clang); on Linux link its runtime.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set_property(TARGET needle::needle APPEND PROPERTY
+    INTERFACE_LINK_LIBRARIES c++ c++abi
+  )
+endif()
