@@ -14,7 +14,7 @@ using ordered_json = nlohmann::ordered_json;
 ordered_json status_param(std::string_view description) {
   return {
     {"type", "string"},
-    {"enum", {"todo", "in_progress", "done"}},
+    {"enum", {"ready", "progressing", "complete"}},
     {"description", description},
   };
 }
@@ -46,7 +46,7 @@ std::string apply_call(Board& board, const json& call) {
   };
 
   if (name == "add_item") {
-    Status s = status_of(Status::Todo);
+    Status s = status_of(Status::Ready);
     board.add(title, s);
     return std::format("added '{}' to {}", title, display_name(s));
   }
@@ -95,6 +95,17 @@ ApplyResult apply_function_calls(Board& board, const json& response) {
     }
   }
   return result;
+}
+
+std::string apply_command(NeedleClient& needle, Board& board, const std::string& command) {
+  auto response = needle.complete(command);
+  if (!response) return "error: " + response.error();
+
+  auto result = apply_function_calls(board, json::parse(*response));
+  std::string status;
+  for (const auto& msg : result.applied) status += msg + "; ";
+  for (const auto& err : result.errors) status += "error: " + err + "; ";
+  return status.empty() ? "no matching action" : status;
 }
 
 } // namespace cb

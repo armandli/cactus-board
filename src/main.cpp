@@ -5,97 +5,59 @@
 #include <string>
 #include <string_view>
 
-#include <ftxui/component/app.hpp>
-#include <ftxui/component/component.hpp>
-#include <ftxui/component/event.hpp>
-#include <ftxui/dom/elements.hpp>
-#include <nlohmann/json.hpp>
-
 #include "board/board.h"
+#include "board/column.h"
 #include "nl/needle_client.h"
 #include "nl/tools.h"
+#include "ui/app.h"
 
 namespace {
-
-using namespace ftxui;
 
 std::string model_path() {
   if (const char* env = std::getenv("NEEDLE_MODEL")) return env;
   return NEEDLE_MODEL_PATH;
 }
 
+cb::Item work_item(std::string title, std::string owner, std::string category, int priority,
+                   std::string_view deadline, cb::Status status, std::string description) {
+  cb::Item item;
+  item.title = std::move(title);
+  item.owner = std::move(owner);
+  item.category = std::move(category);
+  item.priority = priority;
+  item.deadline = cb::parse_date(deadline);
+  item.status = status;
+  item.description = std::move(description);
+  return item;
+}
+
 cb::Board sample_board() {
   cb::Board board;
-  board.add("Set up build", cb::Status::Done);
-  board.add("Fix login bug", cb::Status::InProgress);
-  board.add("Write docs");
-  board.add("API refactor");
+  board.add(work_item("auth", "sam", "platform", 1, "2026-10-20", cb::Status::Ready,
+                      "Replace the session cookie with a signed token and rotate keys daily."));
+  board.add(work_item("docs", "priya", "platform", 2, "2026-10-14", cb::Status::Ready,
+                      "Write the getting-started page and document every keybinding."));
+  board.add(work_item("refactor", "lee", "core", 2, "", cb::Status::Ready,
+                      "Split the parser into a tokenizer and an evaluator."));
+  board.add(work_item("ingest", "priya", "pipeline", 1, "2026-11-30", cb::Status::Progressing,
+                      "Batch the upstream feed so a slow consumer cannot stall the queue."));
+  board.add(work_item("telemetry", "sam", "pipeline", 3, "", cb::Status::Progressing,
+                      "Emit per-request latency histograms to the metrics endpoint."));
+  board.add(work_item("build", "lee", "core", 2, "2026-09-30", cb::Status::Complete,
+                      "CMake presets plus a release target with link-time optimization."));
   return board;
 }
 
-// Sends one English command through Needle and applies the resulting tool calls.
-std::string run_command(cb::NeedleClient& needle, cb::Board& board, const std::string& command) {
-  auto response = needle.complete(command);
-  if (!response) return "error: " + response.error();
-
-  auto result = cb::apply_function_calls(board, nlohmann::json::parse(*response));
-  std::string status;
-  for (const auto& msg : result.applied) status += msg + "; ";
-  for (const auto& err : result.errors) status += "error: " + err + "; ";
-  return status.empty() ? "no matching action" : status;
-}
-
 void print_board(const cb::Board& board) {
-  for (auto s : cb::kAllStatuses) {
-    std::println("{}:", cb::display_name(s));
-    for (const auto* item : board.column(s)) std::println("  #{} {}", item->id, item->title);
-  }
-}
-
-Element render_column(const cb::Board& board, cb::Status status) {
-  Elements cards;
-  for (const auto* item : board.column(status)) {
-    cards.push_back(text(item->title) | border);
-  }
-  return window(text(std::string(cb::display_name(status))) | bold | center, vbox(std::move(cards)) | flex)
-       | flex;
-}
-
-int run_tui(cb::NeedleClient& needle, cb::Board& board) {
-  auto app = App::Fullscreen();
-
-  std::string command;
-  std::string status_line = "Type a command (e.g. \"move write docs to in progress\") and press Enter. Esc quits.";
-
-  InputOption input_opt;
-  input_opt.multiline = false;
-  input_opt.on_enter = [&] {
-    if (command.empty()) return;
-    status_line = run_command(needle, board, command);
-    command.clear();
-  };
-  auto input = Input(&command, "command...", input_opt);
-
-  auto root = Renderer(input, [&] {
-    Elements columns;
-    for (auto s : cb::kAllStatuses) columns.push_back(render_column(board, s));
-    return vbox({
-      text("cactus-board") | bold | center,
-      hbox(std::move(columns)) | flex,
-      hbox({text("> "), input->Render()}) | border,
-      text(status_line) | dim,
-    });
-  });
-  root |= CatchEvent([&](const Event& e) {
-    if (e == Event::Escape) {
-      app.Exit();
-      return true;
+  for (const auto& col : cb::columns(board)) {
+    std::println("{} ({}):", col.name, col.items.size());
+    for (const auto* item : col.items) {
+      std::println("  #{} {} [P{}] {} · {}{}", item->id, item->title, item->priority,
+                   item->owner.empty() ? "unassigned" : item->owner,
+                   item->category.empty() ? "none" : item->category,
+                   item->deadline ? " · due " + cb::format_date(*item->deadline) : "");
     }
-    return false;
-  });
-
-  app.Loop(root);
-  return 0;
+  }
 }
 
 } // namespace
@@ -117,10 +79,10 @@ int main(int argc, char** argv) {
 
   // Headless mode: apply a single command and print the board.
   if (nl_command) {
-    std::println("{}", run_command(*needle, board, *nl_command));
+    std::println("{}", cb::apply_command(*needle, board, *nl_command));
     print_board(board);
     return 0;
   }
 
-  return run_tui(*needle, board);
+  return cb::ui::run_tui(*needle, board);
 }

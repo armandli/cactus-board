@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <format>
 #include <utility>
 
 namespace cb {
@@ -18,34 +19,73 @@ std::string to_lower(std::string_view s) {
 
 std::string_view to_string(Status s) {
   switch (s) {
-    case Status::Todo: return "todo";
-    case Status::InProgress: return "in_progress";
-    case Status::Done: return "done";
+    case Status::Ready: return "ready";
+    case Status::Progressing: return "progressing";
+    case Status::Complete: return "complete";
   }
-  return "todo";
+  return "ready";
 }
 
 std::string_view display_name(Status s) {
   switch (s) {
-    case Status::Todo: return "To Do";
-    case Status::InProgress: return "In Progress";
-    case Status::Done: return "Done";
+    case Status::Ready: return "Ready";
+    case Status::Progressing: return "Progressing";
+    case Status::Complete: return "Complete";
   }
-  return "To Do";
+  return "Ready";
 }
 
 std::optional<Status> parse_status(std::string_view s) {
   auto lower = to_lower(s);
-  if (lower == "todo" || lower == "to do" || lower == "to_do") return Status::Todo;
-  if (lower == "in_progress" || lower == "in progress" || lower == "doing") return Status::InProgress;
-  if (lower == "done") return Status::Done;
+  if (lower == "ready" || lower == "todo" || lower == "to do" || lower == "to_do" ||
+      lower == "backlog")
+    return Status::Ready;
+  if (lower == "progressing" || lower == "in_progress" || lower == "in progress" ||
+      lower == "doing")
+    return Status::Progressing;
+  if (lower == "complete" || lower == "done") return Status::Complete;
   return std::nullopt;
 }
 
-int Board::add(std::string title, Status status) {
-  int id = next_id_++;
-  items_.push_back({id, std::move(title), status});
+std::optional<Date> parse_date(std::string_view s) {
+  if (s.size() != 10 || s[4] != '-' || s[7] != '-') return std::nullopt;
+  auto number = [s](std::size_t pos, std::size_t len) -> std::optional<int> {
+    int value = 0;
+    for (std::size_t i = pos; i < pos + len; ++i) {
+      if (s[i] < '0' || s[i] > '9') return std::nullopt;
+      value = value * 10 + (s[i] - '0');
+    }
+    return value;
+  };
+
+  auto year = number(0, 4);
+  auto month = number(5, 2);
+  auto day = number(8, 2);
+  if (!year || !month || !day) return std::nullopt;
+
+  Date date{std::chrono::year{*year}, std::chrono::month{static_cast<unsigned>(*month)},
+            std::chrono::day{static_cast<unsigned>(*day)}};
+  if (!date.ok()) return std::nullopt;
+  return date;
+}
+
+std::string format_date(Date d) {
+  return std::format("{:04}-{:02}-{:02}", static_cast<int>(d.year()),
+                     static_cast<unsigned>(d.month()), static_cast<unsigned>(d.day()));
+}
+
+int Board::add(Item item) {
+  item.id = next_id_++;
+  int id = item.id;
+  items_.push_back(std::move(item));
   return id;
+}
+
+int Board::add(std::string title, Status status) {
+  Item item;
+  item.title = std::move(title);
+  item.status = status;
+  return add(std::move(item));
 }
 
 bool Board::move(int id, Status status) {

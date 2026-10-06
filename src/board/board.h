@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <chrono>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -8,25 +9,40 @@
 
 namespace cb {
 
-enum class Status { Todo, InProgress, Done };
+enum class Status { Ready, Progressing, Complete };
 
-inline constexpr std::array<Status, 3> kAllStatuses{Status::Todo, Status::InProgress, Status::Done};
+inline constexpr std::array<Status, 3> kAllStatuses{Status::Ready, Status::Progressing,
+                                                   Status::Complete};
 
-// Wire name used in tool calls: "todo", "in_progress", "done".
+// Wire name used in tool calls: "ready", "progressing", "complete".
 std::string_view to_string(Status s);
-// Display name for column headers: "To Do", "In Progress", "Done".
+// Display name for column headers: "Ready", "Progressing", "Complete".
 std::string_view display_name(Status s);
+// Accepts the wire names plus legacy spellings ("todo", "in progress", "done").
 std::optional<Status> parse_status(std::string_view s);
 
+using Date = std::chrono::year_month_day;
+
+// Parses a strict "YYYY-MM-DD" date, rejecting impossible dates like 2026-13-45.
+std::optional<Date> parse_date(std::string_view s);
+std::string format_date(Date d);
+
 struct Item {
-  int id;
-  std::string title;
-  Status status;
+  int id = 0;
+  std::string title; // single word, e.g. "auth"
+  std::string owner;
+  std::string description; // detail text, deliberately not shown on the board
+  std::string category;    // groups items by project
+  int priority = 3;        // lower value means higher priority
+  std::optional<Date> deadline;
+  Status status = Status::Ready;
 };
 
 class Board {
 public:
-  int add(std::string title, Status status = Status::Todo);
+  int add(std::string title, Status status = Status::Ready);
+  // Ignores any caller-set id and assigns a fresh one.
+  int add(Item item);
   bool move(int id, Status status);
   bool remove(int id);
 

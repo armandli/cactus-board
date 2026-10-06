@@ -6,6 +6,7 @@
 #include <nlohmann/json.hpp>
 
 #include "board/board.h"
+#include "nl/needle_client.h"
 
 namespace cb {
 
@@ -19,5 +20,9 @@ struct ApplyResult {
 
 // Applies the "function_calls" array of a Needle response to the board.
 ApplyResult apply_function_calls(Board& board, const nlohmann::json& response);
+
+// Sends one English command through Needle and applies the resulting tool calls,
+// returning a human-readable summary of what changed.
+std::string apply_command(NeedleClient& needle, Board& board, const std::string& command);
 
 } // namespace cb

@@ -28,7 +28,16 @@ TEST(ToolsTest, AddItem) {
 
   EXPECT_TRUE(r.errors.empty());
   ASSERT_NE(board.find_by_title("Write docs"), nullptr);
-  EXPECT_EQ(board.find_by_title("Write docs")->status, Status::Todo);
+  EXPECT_EQ(board.find_by_title("Write docs")->status, Status::Ready);
+}
+
+TEST(ToolsTest, AddItemAcceptsCurrentWireNames) {
+  Board board;
+  auto r = apply_function_calls(board, response({{{"name", "add_item"}, {"arguments", {{"title", "Ship it"}, {"status", "progressing"}}}}}));
+
+  EXPECT_TRUE(r.errors.empty());
+  ASSERT_NE(board.find_by_title("Ship it"), nullptr);
+  EXPECT_EQ(board.find_by_title("Ship it")->status, Status::Progressing);
 }
 
 TEST(ToolsTest, MoveItemMatchesTitleCaseInsensitively) {
@@ -37,7 +46,7 @@ TEST(ToolsTest, MoveItemMatchesTitleCaseInsensitively) {
   auto r = apply_function_calls(board, response({{{"name", "move_item"}, {"arguments", {{"title", "Fix login bug"}, {"status", "done"}}}}}));
 
   EXPECT_TRUE(r.errors.empty());
-  EXPECT_EQ(board.find(id)->status, Status::Done);
+  EXPECT_EQ(board.find(id)->status, Status::Complete);
 }
 
 TEST(ToolsTest, RemoveItem) {
@@ -57,7 +66,7 @@ TEST(ToolsTest, MultipleCallsApplyInOrder) {
   }));
 
   EXPECT_EQ(r.applied.size(), 2u);
-  EXPECT_EQ(board.find_by_title("Ship it")->status, Status::InProgress);
+  EXPECT_EQ(board.find_by_title("Ship it")->status, Status::Progressing);
 }
 
 TEST(ToolsTest, UnknownCardIsReportedNotThrown) {

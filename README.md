@@ -13,7 +13,7 @@ changed with plain-English commands, translated into tool calls on-device by
 ```sh
 make            # downloads Needle 3 into needle3/ (first time), configures and builds
 make test       # builds and runs the GoogleTest suite via ctest
-make run        # launches the TUI (Esc quits)
+make run        # launches the TUI (q quits)
 make release    # optimized build in build-release/
 make clean      # removes build directories
 make distclean  # also removes the downloaded Needle files
@@ -21,14 +21,24 @@ make distclean  # also removes the downloaded Needle files
 
 Headless mode applies one command and prints the board:
 ```sh
-./build/src/cactus-board --nl "move write docs to in progress"
+./build/src/cactus-board --nl "move docs to progressing"
+```
+
+## Keys
+```
+h j k l / arrows   move the selection within and between columns
+H / L              move the selected card one column left / right
+d                  show the selected card's description
+i                  type a natural-language command (Esc cancels)
+q                  quit
 ```
 
 ## Layout
 ```
-src/board/   Board model (items, columns, moves)
+src/board/   Work item model and status columns (items, ordering, moves)
+src/ui/      FTXUI rendering and keyboard interaction
 src/nl/      Needle C API wrapper + board tool schemas and dispatch
-src/main.cpp FTXUI app
+src/main.cpp Argument parsing, seed data and the headless path
 test/        GoogleTest unit tests
 needle3/     Needle 3 engine, header and weights (downloaded)
 cmake/       CMake helpers (Needle imported target)
