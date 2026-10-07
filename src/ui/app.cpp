@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <format>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -29,7 +30,8 @@ constexpr std::string_view kNavHint =
     "hjkl/arrows move · H/L move card · f focus · i command · q quit";
 constexpr std::string_view kFocusHint =
     "j/k prev/next card · H/L move card · f or Esc back · i command · q quit";
-constexpr std::string_view kCommandHint = "Enter runs the command · Esc cancels";
+constexpr std::string_view kCommandHint = "Enter asks Needle · Esc cancels";
+constexpr std::string_view kConfirmHint = "Enter runs it · edit to re-ask · Esc cancels";
 
 } // namespace
 
@@ -41,15 +43,33 @@ int run_tui(NeedleClient& needle, Board& board) {
   bool command_mode = false;
   std::string command;
   std::string status_line;
+  std::optional<Plan> pending;
 
   InputOption input_opt;
   input_opt.multiline = false;
+  // Enter runs a valid proposal that still matches the text; otherwise it asks Needle.
   input_opt.on_enter = [&] {
-    if (!command.empty()) {
-      status_line = apply_command(needle, board, command);
-      command.clear();
+    if (command.empty()) {
+      command_mode = false;
+      return;
     }
-    command_mode = false;
+
+    if (pending && pending->command == command && pending->executable()) {
+      status_line = summarize(apply_plan(board, *pending));
+      pending.reset();
+      command.clear();
+      command_mode = false;
+      return;
+    }
+
+    auto proposed = propose_command(needle, board, command);
+    if (!proposed) {
+      status_line = "error: " + proposed.error();
+      pending.reset();
+      return;
+    }
+    pending = std::move(*proposed);
+    status_line.clear();
   };
   auto input = Input(&command, "move docs to progressing", input_opt);
 
@@ -62,7 +82,14 @@ int run_tui(NeedleClient& needle, Board& board) {
                                       : render_board(cols, sel) | flex);
     rows.push_back(hbox({text("> "), input->Render()}) | border);
 
-    auto hint = command_mode ? kCommandHint : view == View::Focus ? kFocusHint : kNavHint;
+    // A proposal for text that has since been edited is neither shown nor runnable.
+    bool proposing = pending && pending->command == command;
+    if (proposing)
+      rows.push_back(text(pending->describe()) | (pending->executable() ? bold : dim));
+
+    auto hint = command_mode ? (proposing ? kConfirmHint : kCommandHint)
+                : view == View::Focus ? kFocusHint
+                                      : kNavHint;
     rows.push_back(text(std::string(hint)) | dim);
     if (!status_line.empty()) rows.push_back(text(status_line) | dim);
     return vbox(std::move(rows));
@@ -99,6 +126,7 @@ int run_tui(NeedleClient& needle, Board& board) {
     if (command_mode) {
       if (e == Event::Escape) {
         command_mode = false;
+        pending.reset();
         return true;
       }
       return false; // the Input owns the keyboard

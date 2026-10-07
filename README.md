@@ -19,7 +19,8 @@ make clean      # removes build directories
 make distclean  # also removes the downloaded Needle files
 ```
 
-Headless mode applies one command and prints the board:
+Headless mode applies one command and prints the board. There is no terminal to confirm in, so
+the command is applied straight away:
 ```sh
 ./build/src/cactus-board --nl "move docs to progressing"
 ```
@@ -58,13 +59,33 @@ overwrite work it could not parse.
 h j k l / arrows   move the selection within and between columns
 H / L              move the selected card one column left / right
 f                  zone in on the selected card / return to the board (Esc also returns)
-i                  type a natural-language command (Esc cancels)
+i                  type a natural-language command (Enter previews, Enter again runs)
 q                  quit
 ```
 
 `f` opens the focus view: one card filling the screen with every field, including its status
 and the description the board omits. Navigation still works there, so `j`/`k` steps through
 the column and `H`/`L` moves the card — the status line updates as it moves.
+
+## Natural-language commands
+
+`i` opens the input box at the bottom. Needle turns the text into one or more tool calls —
+`add_item`, `move_item` or `remove_item` — which are dry-run against a copy of the board and
+previewed in plain English before anything changes:
+
+```
+> add deploy for sam, priority 1, due 2026-12-01
+will add 'deploy' to Ready
+```
+
+Enter again runs it and the line becomes `done: add 'deploy' to Ready`. A proposal the model
+got wrong shows as `cannot: …` and cannot be run; editing the text drops the stale proposal so
+the next Enter re-asks, and Esc cancels having changed nothing. All of a response's calls
+apply together or not at all.
+
+`add_item` accepts every field of a work item, so `priority` must be `1` or more and `deadline`
+must be `YYYY-MM-DD` — a date the model wrote as prose is rejected in the preview rather than
+silently dropped.
 
 ## Layout
 ```
