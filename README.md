@@ -22,7 +22,7 @@ make distclean  # also removes the downloaded Needle files
 Headless mode applies one command and prints the board. There is no terminal to confirm in, so
 the command is applied straight away:
 ```sh
-./build/src/cactus-board --nl "move docs to progressing"
+./build/cactus-board --nl "move docs to progressing"
 ```
 
 ## Work items
@@ -51,7 +51,7 @@ file that exists and is invalid is a hard error — the program refuses to start
 overwrite work it could not parse.
 
 ```sh
-./build/src/cactus-board --file ~/work/team.json
+./build/cactus-board --file ~/work/team.json
 ```
 
 ## Keys

@@ -32,7 +32,7 @@ test: build
 	ctest --test-dir $(BUILD_DIR) --output-on-failure -j $(JOBS)
 
 run: build
-	./$(BUILD_DIR)/src/cactus-board
+	./$(BUILD_DIR)/cactus-board
 
 clean:
 	rm -rf $(BUILD_DIR) build-release

@@ -29,6 +29,10 @@ FetchContent_MakeAvailable(ftxui nlohmann_json)
 
 include(cmake/Needle.cmake)
 
+# Set after the dependencies are declared so only our own targets land at the top of the build
+# directory, rather than build/src/cactus-board and build/test/cactus_board_tests.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
 add_subdirectory(src)
 
 if(CACTUS_BOARD_BUILD_TESTS)
