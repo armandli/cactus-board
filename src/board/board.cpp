@@ -74,6 +74,10 @@ std::string format_date(Date d) {
                      static_cast<unsigned>(d.month()), static_cast<unsigned>(d.day()));
 }
 
+Board::Board(std::vector<Item> items) : items_(std::move(items)) {
+  for (const auto& item : items_) next_id_ = std::max(next_id_, item.id + 1);
+}
+
 int Board::add(Item item) {
   item.id = next_id_++;
   int id = item.id;

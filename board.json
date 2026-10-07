@@ -1,0 +1,60 @@
+[
+  {
+    "id": 1,
+    "title": "auth",
+    "owner": "sam",
+    "category": "platform",
+    "priority": 1,
+    "deadline": "2026-10-20",
+    "status": "ready",
+    "description": "Replace the session cookie with a signed token and rotate keys daily."
+  },
+  {
+    "id": 2,
+    "title": "docs",
+    "owner": "priya",
+    "category": "platform",
+    "priority": 2,
+    "deadline": "2026-10-14",
+    "status": "ready",
+    "description": "Write the getting-started page and document every keybinding."
+  },
+  {
+    "id": 3,
+    "title": "refactor",
+    "owner": "lee",
+    "category": "core",
+    "priority": 2,
+    "status": "ready",
+    "description": "Split the parser into a tokenizer and an evaluator."
+  },
+  {
+    "id": 4,
+    "title": "ingest",
+    "owner": "priya",
+    "category": "pipeline",
+    "priority": 1,
+    "deadline": "2026-11-30",
+    "status": "progressing",
+    "description": "Batch the upstream feed so a slow consumer cannot stall the queue."
+  },
+  {
+    "id": 5,
+    "title": "telemetry",
+    "owner": "sam",
+    "category": "pipeline",
+    "priority": 3,
+    "status": "progressing",
+    "description": "Emit per-request latency histograms to the metrics endpoint."
+  },
+  {
+    "id": 6,
+    "title": "build",
+    "owner": "lee",
+    "category": "core",
+    "priority": 2,
+    "deadline": "2026-09-30",
+    "status": "complete",
+    "description": "CMake presets plus a release target with link-time optimization."
+  }
+]

@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <optional>
 #include <print>
@@ -7,6 +8,7 @@
 
 #include "board/board.h"
 #include "board/column.h"
+#include "board/store.h"
 #include "nl/needle_client.h"
 #include "nl/tools.h"
 #include "ui/app.h"
@@ -16,36 +18,6 @@ namespace {
 std::string model_path() {
   if (const char* env = std::getenv("NEEDLE_MODEL")) return env;
   return NEEDLE_MODEL_PATH;
-}
-
-cb::Item work_item(std::string title, std::string owner, std::string category, int priority,
-                   std::string_view deadline, cb::Status status, std::string description) {
-  cb::Item item;
-  item.title = std::move(title);
-  item.owner = std::move(owner);
-  item.category = std::move(category);
-  item.priority = priority;
-  item.deadline = cb::parse_date(deadline);
-  item.status = status;
-  item.description = std::move(description);
-  return item;
-}
-
-cb::Board sample_board() {
-  cb::Board board;
-  board.add(work_item("auth", "sam", "platform", 1, "2026-10-20", cb::Status::Ready,
-                      "Replace the session cookie with a signed token and rotate keys daily."));
-  board.add(work_item("docs", "priya", "platform", 2, "2026-10-14", cb::Status::Ready,
-                      "Write the getting-started page and document every keybinding."));
-  board.add(work_item("refactor", "lee", "core", 2, "", cb::Status::Ready,
-                      "Split the parser into a tokenizer and an evaluator."));
-  board.add(work_item("ingest", "priya", "pipeline", 1, "2026-11-30", cb::Status::Progressing,
-                      "Batch the upstream feed so a slow consumer cannot stall the queue."));
-  board.add(work_item("telemetry", "sam", "pipeline", 3, "", cb::Status::Progressing,
-                      "Emit per-request latency histograms to the metrics endpoint."));
-  board.add(work_item("build", "lee", "core", 2, "2026-09-30", cb::Status::Complete,
-                      "CMake presets plus a release target with link-time optimization."));
-  return board;
 }
 
 void print_board(const cb::Board& board) {
@@ -63,10 +35,25 @@ void print_board(const cb::Board& board) {
 } // namespace
 
 int main(int argc, char** argv) {
+  std::filesystem::path path = "board.json";
   std::optional<std::string> nl_command;
   for (int i = 1; i < argc; ++i) {
     std::string_view arg = argv[i];
-    if (arg == "--nl" && i + 1 < argc) nl_command = argv[++i];
+    if (arg == "--file" && i + 1 < argc) {
+      path = argv[++i];
+    } else if (arg == "--nl" && i + 1 < argc) {
+      nl_command = argv[++i];
+    } else {
+      std::println(std::cerr, "usage: cactus-board [--file <path>] [--nl <command>]");
+      return 2;
+    }
+  }
+
+  // Load before Needle starts, so a bad file fails fast instead of after a slow model load.
+  auto board = cb::load_board(path);
+  if (!board) {
+    std::println(std::cerr, "{}", board.error());
+    return 1;
   }
 
   auto needle = cb::NeedleClient::create(model_path(), cb::board_tools_json());
@@ -75,14 +62,18 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  auto board = sample_board();
-
   // Headless mode: apply a single command and print the board.
   if (nl_command) {
-    std::println("{}", cb::apply_command(*needle, board, *nl_command));
-    print_board(board);
-    return 0;
+    std::println("{}", cb::apply_command(*needle, *board, *nl_command));
+    print_board(*board);
+  } else if (int rc = cb::ui::run_tui(*needle, *board); rc != 0) {
+    return rc;
   }
 
-  return cb::ui::run_tui(*needle, board);
+  // Reported after the fullscreen screen is torn down, so the message is actually visible.
+  if (auto saved = cb::save_board(path, *board); !saved) {
+    std::println(std::cerr, "{}", saved.error());
+    return 1;
+  }
+  return 0;
 }

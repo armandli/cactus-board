@@ -40,6 +40,10 @@ struct Item {
 
 class Board {
 public:
+  Board() = default;
+  // Adopts items with their existing ids; subsequent add() continues past the highest one.
+  explicit Board(std::vector<Item> items);
+
   int add(std::string title, Status status = Status::Ready);
   // Ignores any caller-set id and assigns a fresh one.
   int add(Item item);

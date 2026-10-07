@@ -1,6 +1,7 @@
 add_library(cactus_board_core STATIC
   board/board.cpp
   board/column.cpp
+  board/store.cpp
   nl/needle_client.cpp
   nl/tools.cpp
 )
