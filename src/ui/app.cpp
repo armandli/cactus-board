@@ -15,6 +15,7 @@
 #include "board/column.h"
 #include "nl/tools.h"
 #include "ui/board_view.h"
+#include "ui/focus_view.h"
 
 namespace cb::ui {
 
@@ -22,8 +23,12 @@ using namespace ftxui;
 
 namespace {
 
+enum class View { Board, Focus };
+
 constexpr std::string_view kNavHint =
-    "hjkl/arrows move · H/L move card · d details · i command · q quit";
+    "hjkl/arrows move · H/L move card · f focus · i command · q quit";
+constexpr std::string_view kFocusHint =
+    "j/k prev/next card · H/L move card · f or Esc back · i command · q quit";
 constexpr std::string_view kCommandHint = "Enter runs the command · Esc cancels";
 
 } // namespace
@@ -32,8 +37,8 @@ int run_tui(NeedleClient& needle, Board& board) {
   auto app = App::Fullscreen();
 
   Selection sel;
+  View view = View::Board;
   bool command_mode = false;
-  bool show_detail = false;
   std::string command;
   std::string status_line;
 
@@ -52,13 +57,13 @@ int run_tui(NeedleClient& needle, Board& board) {
     auto cols = columns(board);
     clamp(sel, cols);
 
-    Elements rows{
-      text("cactus-board") | bold | center,
-      render_board(cols, sel) | flex,
-    };
-    if (show_detail) rows.push_back(render_detail(selected_item(sel, cols)));
+    Elements rows{text("cactus-board") | bold | center};
+    rows.push_back(view == View::Focus ? render_focus(selected_item(sel, cols)) | flex
+                                      : render_board(cols, sel) | flex);
     rows.push_back(hbox({text("> "), input->Render()}) | border);
-    rows.push_back(text(std::string(command_mode ? kCommandHint : kNavHint)) | dim);
+
+    auto hint = command_mode ? kCommandHint : view == View::Focus ? kFocusHint : kNavHint;
+    rows.push_back(text(std::string(hint)) | dim);
     if (!status_line.empty()) rows.push_back(text(status_line) | dim);
     return vbox(std::move(rows));
   });
@@ -84,7 +89,7 @@ int run_tui(NeedleClient& needle, Board& board) {
     sel.row = it == moved.items.end() ? 0 : static_cast<int>(it - moved.items.begin());
   };
 
-  auto focus_column = [&](int delta) {
+  auto select_column = [&](int delta) {
     int target = status_index(sel.column) + delta;
     if (target < 0 || target >= static_cast<int>(kAllStatuses.size())) return;
     sel.column = kAllStatuses[static_cast<std::size_t>(target)];
@@ -99,10 +104,26 @@ int run_tui(NeedleClient& needle, Board& board) {
       return false; // the Input owns the keyboard
     }
 
-    if (e == Event::Escape || e == Event::Character('q')) {
+    if (e == Event::Character('q')) {
       app.Exit();
       return true;
     }
+    if (view == View::Focus) {
+      if (e == Event::Escape || e == Event::Character('f')) {
+        view = View::Board;
+        return true;
+      }
+    } else {
+      if (e == Event::Escape) {
+        app.Exit();
+        return true;
+      }
+      if (e == Event::Character('f')) {
+        view = View::Focus;
+        return true;
+      }
+    }
+
     if (e == Event::ArrowUp || e == Event::Character('k')) {
       --sel.row;
       return true;
@@ -112,11 +133,11 @@ int run_tui(NeedleClient& needle, Board& board) {
       return true;
     }
     if (e == Event::ArrowLeft || e == Event::Character('h')) {
-      focus_column(-1);
+      select_column(-1);
       return true;
     }
     if (e == Event::ArrowRight || e == Event::Character('l')) {
-      focus_column(1);
+      select_column(1);
       return true;
     }
     if (e == Event::Character('H') || e == Event::Character('<')) {
@@ -125,10 +146,6 @@ int run_tui(NeedleClient& needle, Board& board) {
     }
     if (e == Event::Character('L') || e == Event::Character('>')) {
       move_card(1);
-      return true;
-    }
-    if (e == Event::Character('d')) {
-      show_detail = !show_detail;
       return true;
     }
     if (e == Event::Character('i') || e == Event::Character('/')) {

@@ -17,10 +17,6 @@ const Column* find_column(const std::vector<Column>& cols, Status status) {
   return it == cols.end() ? nullptr : &*it;
 }
 
-Element field(std::string_view label, std::string value) {
-  return hbox({text(std::string(label)) | dim, text(std::move(value))});
-}
-
 } // namespace
 
 void clamp(Selection& sel, const std::vector<Column>& cols) {
@@ -61,23 +57,6 @@ Element render_board(const std::vector<Column>& cols, const Selection& sel) {
     rendered.push_back(render_column(col, col.status == sel.column, sel.row));
   }
   return hbox(std::move(rendered));
-}
-
-Element render_detail(const Item* item) {
-  if (!item) {
-    return window(text("Details") | bold, text("no card selected") | dim);
-  }
-  return window(text(item->title) | bold,
-                vbox({
-                  field("owner: ", item->owner.empty() ? "unassigned" : item->owner),
-                  field("category: ", item->category.empty() ? "none" : item->category),
-                  field("priority: ", std::format("{}", item->priority)),
-                  field("deadline: ",
-                        item->deadline ? format_date(*item->deadline) : "none"),
-                  separator(),
-                  paragraph(item->description.empty() ? "(no description)"
-                                                      : item->description),
-                }));
 }
 
 } // namespace cb::ui

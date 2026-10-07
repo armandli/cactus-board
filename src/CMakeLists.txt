@@ -15,6 +15,7 @@ target_compile_options(cactus_board_core PRIVATE -Wall -Wextra -Wpedantic)
 add_library(cactus_board_ui STATIC
   ui/card.cpp
   ui/board_view.cpp
+  ui/focus_view.cpp
   ui/app.cpp
 )
 target_link_libraries(cactus_board_ui PUBLIC

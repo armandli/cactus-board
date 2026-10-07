@@ -22,7 +22,5 @@ const Item* selected_item(const Selection& sel, const std::vector<Column>& cols)
 
 ftxui::Element render_column(const Column& col, bool is_current, int selected_row);
 ftxui::Element render_board(const std::vector<Column>& cols, const Selection& sel);
-// The only place an item's description is shown.
-ftxui::Element render_detail(const Item* item);
 
 } // namespace cb::ui

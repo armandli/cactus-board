@@ -57,16 +57,20 @@ overwrite work it could not parse.
 ```
 h j k l / arrows   move the selection within and between columns
 H / L              move the selected card one column left / right
-d                  show the selected card's description
+f                  zone in on the selected card / return to the board (Esc also returns)
 i                  type a natural-language command (Esc cancels)
 q                  quit
 ```
+
+`f` opens the focus view: one card filling the screen with every field, including its status
+and the description the board omits. Navigation still works there, so `j`/`k` steps through
+the column and `H`/`L` moves the card — the status line updates as it moves.
 
 ## Layout
 ```
 board.json   The work items themselves (checked-in sample data)
 src/board/   Work item model, status columns and JSON persistence
-src/ui/      FTXUI rendering and keyboard interaction
+src/ui/      FTXUI rendering and keyboard interaction (board view and focus view)
 src/nl/      Needle C API wrapper + board tool schemas and dispatch
 src/main.cpp Argument parsing, load/save and the headless path
 test/        GoogleTest unit tests
